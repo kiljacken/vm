@@ -22,8 +22,8 @@ net_tap_name="win10"
 ovmf_code_path="/home/kiljacken/vm/ovmf/OVMF_CODE-pure-efi.fd"
 ovmf_vars_path="/home/kiljacken/vm/ovmf/OVMF_VARS-pure-efi.fd"
 
-disk_name="/dev/nvme0n1p5"
-disk_format="raw"
+disk_name="vfio-win10.qcow2"
+disk_format="qcow2"
 
 evdev_keyboard="/dev/input/event0"
 evdev_mouse="/dev/input/by-id/usb-Logitech_USB_Receiver-if02-event-mouse"
@@ -98,8 +98,14 @@ set_governor "performance"
 ovmf_tmp_vars=/tmp/ovmf_vars_${vm_name}.fd
 cp $ovmf_vars_path $ovmf_tmp_vars
 
+# Pin CPU cores
+cset set -c 0,1,6,7 -s system
+cset set -c 0-11 -s vm
+cset proc -m -f root -t system
+cset proc -k -f root -t system
+
 echo "Starting QEMU"
-qemu-system-x86_64 \
+cset proc -e -s vm -- qemu-system-x86_64 \
 	-name $vm_name \
 	-nodefaults \
 	-nodefconfig \
@@ -128,10 +134,14 @@ qemu-system-x86_64 \
 	-soundhw hda \
 	-object iothread,id=iothread0 \
 	-device virtio-scsi-pci,id=scsi,iothread=iothread0 \
-	-drive file=$disk_name,id=disk0,format=$disk_format,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0
-	#-drive file=/dev/sda,id=disk1,format=raw,if=none,cache=writeback,aio=threads -device scsi-hd,bus=scsi.0,drive=disk1
-	#-drive file=./Win10_1709_EnglishInternational_x64.iso,media=cdrom
-	#-drive file=./virtio-win-0.1.141.iso,media=cdrom
+	-drive file=$disk_name,id=disk0,format=$disk_format,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0 \
+	-drive file=./Win10_1709_EnglishInternational_x64.iso,media=cdrom \
+	-drive file=./virtio-win-0.1.141.iso,media=cdrom
+	#-drive file=/dev/sda,id=disk1,format=raw,if=none,cache=writeback,aio=threads -device scsi-hd,bus=scsi.0,drive=disk1 \
+
+# Unpin CPU cores
+cset set -d system
+cset set -d vm
 
 set_governor "powersave"
 free_hugepages
