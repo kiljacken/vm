@@ -16,16 +16,17 @@ num_hugepages=8200
 
 net_interface="wlp5s0"
 net_tap_name="win10"
+net_dev_mac="35:5A:5F:2C:B9:4A"
 
 #ovmf_code_path="/usr/share/ovmf/ovmf_code_x64.bin"
 #ovmf_vars_path="/usr/share/ovmf/ovmf_vars_x64.bin"
 ovmf_code_path="/home/kiljacken/vm/ovmf/OVMF_CODE-pure-efi.fd"
 ovmf_vars_path="/home/kiljacken/vm/ovmf/OVMF_VARS-pure-efi.fd"
 
-disk_name="vfio-win10.qcow2"
-disk_format="qcow2"
+disk_name="vfio-win10.raw"
+disk_format="raw"
 
-evdev_keyboard="/dev/input/event0"
+evdev_keyboard="/dev/input/event4"
 evdev_mouse="/dev/input/by-id/usb-Logitech_USB_Receiver-if02-event-mouse"
 
 machine_type="pc-i440fx-2.11"
@@ -89,9 +90,9 @@ function set_governor() {
 	echo $1 | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null
 }
 
-setup_networking
 attach_to_vfio "$pci_bus_vga" "$pci_id_vga"
 attach_to_vfio "$pci_bus_snd" "$pci_id_snd"
+setup_networking
 allocate_hugepages
 set_governor "performance"
 
@@ -101,8 +102,7 @@ cp $ovmf_vars_path $ovmf_tmp_vars
 # Pin CPU cores
 cset set -c 0,1,6,7 -s system
 cset set -c 0-11 -s vm
-cset proc -m -f root -t system
-cset proc -k -f root -t system
+cset proc --force -m -k -f root -t system
 
 echo "Starting QEMU"
 cset proc -e -s vm -- qemu-system-x86_64 \
@@ -125,19 +125,21 @@ cset proc -e -s vm -- qemu-system-x86_64 \
 	-drive file=$ovmf_tmp_vars,if=pflash,format=raw \
 	-vga none \
 	-nographic \
+	-rtc base=localtime,clock=host,driftfix=slew \
+	-no-hpet \
 	-object input-linux,id=mouse1,evdev=$evdev_mouse \
 	-object input-linux,id=kbd1,evdev=$evdev_keyboard,grab_all=on,repeat=on \
 	-device vfio-pci,host=$pci_bus_vga,multifunction=on \
 	-device vfio-pci,host=$pci_bus_snd \
-	-net nic,model=virtio \
-	-net tap,ifname=$net_tap_name,script=no,downscript=no \
+	-device virtio-net-pci,netdev=net0,mac=$net_dev_mac \
+	-netdev tap,id=net0,ifname=$net_tap_name,script=no,downscript=no \
 	-soundhw hda \
 	-object iothread,id=iothread0 \
 	-device virtio-scsi-pci,id=scsi,iothread=iothread0 \
 	-drive file=$disk_name,id=disk0,format=$disk_format,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0 \
-	-drive file=./Win10_1709_EnglishInternational_x64.iso,media=cdrom \
-	-drive file=./virtio-win-0.1.141.iso,media=cdrom
-	#-drive file=/dev/sda,id=disk1,format=raw,if=none,cache=writeback,aio=threads -device scsi-hd,bus=scsi.0,drive=disk1 \
+	-drive file=/dev/sda,id=disk1,format=raw,if=none,cache=writeback,aio=threads -device scsi-hd,bus=scsi.0,drive=disk1
+	#-drive file=./Win10_1709_EnglishInternational_x64.iso,media=cdrom \
+	#-drive file=./virtio-win-0.1.141.iso,media=cdrom
 
 # Unpin CPU cores
 cset set -d system
@@ -145,5 +147,5 @@ cset set -d vm
 
 set_governor "powersave"
 free_hugepages
-detach_from_vfio "$pci_bus_vga" "$pci_bus_snd"
 teardown_networking
+detach_from_vfio "$pci_bus_vga" "$pci_bus_snd"
