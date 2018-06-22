@@ -89,10 +89,12 @@ set_governor() {
 PCI_BUS_VGA="01:00.0"
 PCI_BUS_SND="01:00.1"
 PCI_BUS_NVME="06:00.0"
+PCI_BUS_USB="04:00.0"
 
 #attach_to_vfio "$PCI_BUS_VGA" "1002 67df"
 #attach_to_vfio "$PCI_BUS_SND" "1002 aaf0"
 attach_to_vfio "$PCI_BUS_NVME" "144d a804"
+attach_to_vfio "$PCI_BUS_USB" "1b21 1242"
 setup_networking
 
 echo 3 > /proc/sys/vm/drop_caches
@@ -149,6 +151,7 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -device vfio-pci,host=$PCI_BUS_VGA,bus=root,addr=00.0,multifunction=on \
     -device vfio-pci,host=$PCI_BUS_SND,bus=root,addr=00.1 \
     -device vfio-pci,host=$PCI_BUS_NVME,bus=root,addr=01.0 \
+    -device vfio-pci,host=$PCI_BUS_USB,bus=root,addr=02.0 \
     -device virtio-net-pci,netdev=net0,mac=$NET_DEV_MAC \
     -netdev tap,id=net0,ifname=$NET_TAP_NAME,script=no,downscript=no \
     -soundhw hda \
@@ -177,4 +180,4 @@ echo 1 > /sys/bus/workqueue/devices/writeback/numa
 
 teardown_networking
 #detach_from_vfio "$PCI_BUS_VGA" "$PCI_BUS_SND"
-detach_from_vfio "$PCI_BUS_NVME"
+detach_from_vfio "$PCI_BUS_NVME" "$PCI_BUS_USB"
