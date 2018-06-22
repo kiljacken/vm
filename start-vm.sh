@@ -37,33 +37,20 @@ VM_HUGEPAGES_NEED=$(( VM_MEMORY / HUGEPAGES_SIZE ))
 
 setup_networking() {
     ip tuntap add dev $NET_TAP_NAME mode tap
-    ip addr add 172.20.0.1/24 dev $NET_TAP_NAME
-    ip route add 172.20.0.2 dev $NET_TAP_NAME
-
-    ip link set dev $NET_TAP_NAME address '12:c7:b3:1c:eb:34'
+    ip route add 192.168.0.123 dev $NET_TAP_NAME scope host
     ip link set $NET_TAP_NAME up
 
     sysctl net.ipv4.conf."$NET_TAP_NAME".proxy_arp=1
     sysctl net.ipv4.conf."$NET_INTERFACE".proxy_arp=1
     sysctl net.ipv4.ip_forward=1
-
-    iptables -t nat -A POSTROUTING -o $NET_INTERFACE -j MASQUERADE
-    iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-    iptables -A FORWARD -i $NET_TAP_NAME -o $NET_INTERFACE -j ACCEPT
 }
 
 teardown_networking() {
-    iptables -t nat -D POSTROUTING -o $NET_INTERFACE -j MASQUERADE
-    iptables -D FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-    iptables -D FORWARD -i $NET_TAP_NAME -o $NET_INTERFACE -j ACCEPT
-
     sysctl net.ipv4.conf."$NET_TAP_NAME".proxy_arp=0
     sysctl net.ipv4.conf."$NET_INTERFACE".proxy_arp=0
     sysctl net.ipv4.ip_forward=0
 
     ip link set $NET_TAP_NAME down
-    
-    ip route del 172.20.0.2 dev $NET_TAP_NAME
     ip tuntap del $NET_TAP_NAME mode tap
 }
 
@@ -167,12 +154,11 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -soundhw hda \
     -object iothread,id=iothread0 \
     -device virtio-scsi-pci,id=scsi,iothread=iothread0 \
-    -drive file=/dev/disk/by-id/ata-ST31000524AS_9VPDNR3W,id=disk0,format=raw,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0 \
-    -drive file=./Win10_1803_EnglishInternational_x64.iso,media=cdrom \
-    -drive file=./virtio-win-0.1.141.iso,media=cdrom
+    -drive file=/dev/disk/by-id/ata-ST31000524AS_9VPDNR3W,id=disk0,format=raw,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0
+    #-drive file=./Win10_1803_EnglishInternational_x64.iso,media=cdrom \
+    #-drive file=./virtio-win-0.1.141.iso,media=cdrom
 
 # Switch monitor to HDMI input
-modprobe i2c_dev
 ddcutil setvcp 60 0x11
 
 # Unpin CPU cores
