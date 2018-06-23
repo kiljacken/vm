@@ -38,6 +38,7 @@ VM_HUGEPAGES_NEED=$(( VM_MEMORY / HUGEPAGES_SIZE ))
 setup_networking() {
     ip tuntap add dev $NET_TAP_NAME mode tap
     ip route add 192.168.0.123 dev $NET_TAP_NAME scope host
+    ip link set dev $NET_TAP_NAME address '12:c7:b3:1c:eb:34'
     ip link set $NET_TAP_NAME up
 
     sysctl net.ipv4.conf."$NET_TAP_NAME".proxy_arp=1
