@@ -47,12 +47,10 @@ setup_networking() {
 
     # iptables routing to get steam streaming working
     iptables -t mangle -A PREROUTING -p udp --dport 27036 -j TEE --gateway 192.168.0.123
-    iptables -t nat -A PREROUTING -p udp -d 192.168.0.7 --dport 27031 -j DNAT --to-destination 192.168.0.123:27031
 }
 
 teardown_networking() {
     iptables -t mangle -D PREROUTING -p udp --dport 27036 -j TEE --gateway 192.168.0.123
-    iptables -t nat -D PREROUTING -p udp -d 192.168.0.7 --dport 27031 -j DNAT --to-destination 192.168.0.123:27031
 
     sysctl net.ipv4.conf."$NET_TAP_NAME".proxy_arp=0
     sysctl net.ipv4.conf."$NET_INTERFACE".proxy_arp=0
@@ -104,7 +102,6 @@ PCI_BUS_USB="04:00.0"
 #attach_to_vfio "$PCI_BUS_SND" "1002 aaf0"
 attach_to_vfio "$PCI_BUS_NVME" "144d a804"
 attach_to_vfio "$PCI_BUS_USB" "1b21 1242"
-setup_networking
 
 echo 3 > /proc/sys/vm/drop_caches
 echo 1 > /proc/sys/vm/compact_memory
@@ -120,6 +117,7 @@ echo 0 > /sys/bus/workqueue/devices/writeback/numa
 
 #allocate_hugepages
 #set_governor "performance"
+setup_networking
 
 # Pin CPU cores
 cset set -c $HOST_CORES -s system
@@ -179,6 +177,7 @@ cset set -d vm
 
 #set_governor "powersave"
 #free_hugepages
+teardown_networking
 
 sysctl vm.nr_hugepages=0
 sysctl vm.stat_interval=1
@@ -187,6 +186,5 @@ echo always > /sys/kernel/mm/transparent_hugepage/enabled
 echo powersave | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 echo 1 > /sys/bus/workqueue/devices/writeback/numa
 
-teardown_networking
 #detach_from_vfio "$PCI_BUS_VGA" "$PCI_BUS_SND"
 detach_from_vfio "$PCI_BUS_NVME" "$PCI_BUS_USB"
