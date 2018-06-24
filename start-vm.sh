@@ -37,20 +37,28 @@ VM_HUGEPAGES_NEED=$(( VM_MEMORY / HUGEPAGES_SIZE ))
 
 setup_networking() {
     ip tuntap add dev $NET_TAP_NAME mode tap
-    ip route add 192.168.0.123 dev $NET_TAP_NAME
     ip link set dev $NET_TAP_NAME address '12:c7:b3:1c:eb:34'
     ip link set $NET_TAP_NAME up
+    ip route add 192.168.0.123 dev $NET_TAP_NAME
 
     sysctl net.ipv4.conf."$NET_TAP_NAME".proxy_arp=1
     sysctl net.ipv4.conf."$NET_INTERFACE".proxy_arp=1
     sysctl net.ipv4.ip_forward=1
+
+    # iptables routing to get steam streaming working
+    iptables -t mangle -A PREROUTING -p udp --dport 27036 -j TEE --gateway 192.168.0.123
+    iptables -t nat -A PREROUTING -p udp -d 192.168.0.7 --dport 27031 -j DNAT --to-destination 192.168.0.123:27031
 }
 
 teardown_networking() {
+    iptables -t mangle -D PREROUTING -p udp --dport 27036 -j TEE --gateway 192.168.0.123
+    iptables -t nat -D PREROUTING -p udp -d 192.168.0.7 --dport 27031 -j DNAT --to-destination 192.168.0.123:27031
+
     sysctl net.ipv4.conf."$NET_TAP_NAME".proxy_arp=0
     sysctl net.ipv4.conf."$NET_INTERFACE".proxy_arp=0
     sysctl net.ipv4.ip_forward=0
 
+    ip route del 192.168.0.123
     ip link set $NET_TAP_NAME down
     ip tuntap del $NET_TAP_NAME mode tap
 }
