@@ -159,6 +159,8 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -device vfio-pci,host=$PCI_BUS_SND,bus=root,addr=00.1 \
     -device vfio-pci,host=$PCI_BUS_NVME,bus=root,addr=01.0 \
     -device vfio-pci,host=$PCI_BUS_USB,bus=root,addr=02.0 \
+    -device virtio-mouse-pci \
+    -device virtio-keyboard-pci \
     -device virtio-net-pci,netdev=net0,mac=$NET_DEV_MAC \
     -netdev tap,id=net0,ifname=$NET_TAP_NAME,script=no,downscript=no \
     -soundhw hda \
