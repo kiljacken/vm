@@ -22,8 +22,8 @@ cp $OVMF_VARS_PATH $OVMF_TEMP_VARS
 EVDEV_KEYBOARD="/dev/input/by-path/platform-i8042-serio-0-event-kbd"
 EVDEV_MOUSE="/dev/input/by-id/usb-SteelSeries_SteelSeries_Sensei_310_eSports_Mouse_000000000000-if01-event-mouse"
 
-export QEMU_AUDIO_DRV=pa
-export QEMU_PA_SERVER=/run/user/1000/pulse/native
+#export QEMU_AUDIO_DRV=pa
+#export QEMU_PA_SERVER=/run/user/1000/pulse/native
 
 TOTAL_CORES='0-11'
 HOST_CORES='0-1,6-7'            # Cores reserved for host
@@ -69,8 +69,10 @@ detach_from_vfio() {
     echo 1 > /sys/bus/pci/devices/0000:$1/remove
 }
 
-PCI_BUS_VGA="$(lspci -nn | grep 1002:6719 | cut -d' ' -f1)"
-PCI_BUS_SND="$(lspci -nn | grep 1002:aa80 | cut -d' ' -f1)"
+PCI_BUS_GPU_VGA="$(lspci -nn | grep 10de:1f02 | cut -d' ' -f1)"
+PCI_BUS_GPU_SND="$(lspci -nn | grep 10de:10f9 | cut -d' ' -f1)"
+PCI_BUS_GPU_USB="$(lspci -nn | grep 10de:1ada | cut -d' ' -f1)"
+PCI_BUS_GPU_SER="$(lspci -nn | grep 10de:1adb | cut -d' ' -f1)"
 PCI_BUS_NVME="$(lspci -nn | grep 8086:f1a5 | cut -d' ' -f1)"
 PCI_BUS_USB="$(lspci -nn | grep 1b21:1242 | cut -d' ' -f1)"
 
@@ -78,6 +80,9 @@ PCI_BUS_USB="$(lspci -nn | grep 1b21:1242 | cut -d' ' -f1)"
 #attach_to_vfio "$PCI_BUS_SND" "1002 aaf8"
 #attach_to_vfio "$PCI_BUS_USB" "1b21 1242"
 attach_to_vfio "$PCI_BUS_NVME" "8086 f1a5"
+
+echo 0 > /sys/class/vtconsole/vtcon0/bind
+echo efi-framebuffer.0 > /sys/bus/platform/drivers/efi-framebuffer/unbind 
 
 echo 3 > /proc/sys/vm/drop_caches
 echo 1 > /proc/sys/vm/compact_memory
@@ -99,11 +104,17 @@ touch /dev/shm/looking-glass
 chown kiljacken:kiljacken /dev/shm/looking-glass
 chmod 660 /dev/shm/looking-glass
 
+echo "Starting scream-pulse..."
+scream-pulse -i $NET_INTERFACE &
+
 echo "Starting QEMU"
 cset proc -e -s vm -- qemu-system-x86_64 \
+    -nodefaults \
+    -no-user-config \
+    -monitor stdio \
     -name $VM_NAME \
     -enable-kvm \
-    -cpu host,hv_relaxed,hv_vapic,hv_spinlocks=0x1fff,hv_time \
+    -cpu host,kvm=off,hv_relaxed,hv_vapic,hv_spinlocks=0x1fff,hv_time,hv_vendor_id=nuckfvidia \
     -smp cpus=8,sockets=1,cores=4,threads=2 \
     -machine q35,accel=kvm,mem-merge=off \
     -vcpu vcpunum=0,affinity=2 -vcpu vcpunum=1,affinity=8 \
@@ -116,10 +127,14 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -vga none \
     -rtc base=localtime,clock=host,driftfix=slew \
     -no-hpet \
+    -drive file=$OVMF_CODE_PATH,if=pflash,format=raw,readonly=on \
+    -drive file=$OVMF_TEMP_VARS,if=pflash,format=raw \
     -object input-linux,id=mouse1,evdev=$EVDEV_MOUSE \
     -object input-linux,id=kbd1,evdev=$EVDEV_KEYBOARD,grab_all=on,repeat=on \
-    -device vfio-pci,host=$PCI_BUS_VGA,multifunction=on,x-vga=on,romfile=./hd6950-no-uefi.rom \
-    -device vfio-pci,host=$PCI_BUS_SND, \
+    -device vfio-pci,host=$PCI_BUS_GPU_VGA,multifunction=on \
+    -device vfio-pci,host=$PCI_BUS_GPU_SND, \
+    -device vfio-pci,host=$PCI_BUS_GPU_USB, \
+    -device vfio-pci,host=$PCI_BUS_GPU_SER, \
     -device vfio-pci,host=$PCI_BUS_NVME \
     -device virtio-mouse-pci \
     -device virtio-keyboard-pci \
@@ -127,22 +142,19 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -device ivshmem-plain,memdev=ivshmem \
     -object memory-backend-file,id=ivshmem,share=on,mem-path=/dev/shm/looking-glass,size=32M \
     -netdev tap,id=net0,ifname=$NET_TAP_NAME,script=no,downscript=no \
-    -soundhw hda \
-    -boot order=dc \
     -drive file=./Win10_1809Oct_EnglishInternational_x64.iso,media=cdrom \
     -drive file=./virtio-win-0.1.160.iso,media=cdrom
-    #-monitor stdio \
-    #-nodefaults \
-    #-no-user-config \
-    #-drive file=$OVMF_CODE_PATH,if=pflash,format=raw,readonly=on \
-    #-drive file=$OVMF_TEMP_VARS,if=pflash,format=raw \
+    #-soundhw hda \
+    #-boot order=dc \
     #-device vfio-pci,host=$PCI_BUS_USB,bus=root_port1,addr=02.0 \
     #-vga std \
     #-drive file=/dev/disk/by-id/ata-ST31000524AS_9VPDNR3W,id=disk0,format=raw,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0 \
     #romfile=./hd6950-no-uefi.rom
 
+killall scream-pulse
+
 # Switch monitor to DP-2 input
-ddcutil -d 1 setvcp 60 0x10
+ddcutil -d 1 setvcp 60 0xf
 
 # Unpin CPU cores
 cset set -d system
