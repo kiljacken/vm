@@ -159,12 +159,22 @@ echo never > /sys/kernel/mm/transparent_hugepage/enabled
 sysctl vm.stat_interval=120
 sysctl -w kernel.watchdog=0
 
-# grep "Hugepagesize:" /proc/meminfo
-HUGEPAGE_COUNT=$(echo "$MEMORY_MB / 2" | bc)
-echo "Allocating $HUGEPAGE_COUNT hugepages..."
+echo "Clearing caches..."
+sync
 echo 3 > /proc/sys/vm/drop_caches
 echo 1 > /proc/sys/vm/compact_memory
+
+# grep "Hugepagesize:" /proc/meminfo
+HUGEPAGE_SIZE_KB=$(cat /proc/meminfo  | grep Hugepagesize | awk '{ print $2 }')
+HUGEPAGE_COUNT=$(echo "($MEMORY_MB * 1024) / $HUGEPAGE_SIZE_KB" | bc)
+echo "Allocating $HUGEPAGE_COUNT hugepages..."
 echo $HUGEPAGE_COUNT > /proc/sys/vm/nr_hugepages
+
+ALLOCATED_HUGEPAGES=$(cat /proc/sys/vm/nr_hugepages)
+if [ "$ALLOCATED_HUGEPAGES" != "$HUGEPAGE_COUNT" ];
+then
+    echo "Couldn't allocate hugepages!"
+fi
 
 setup_networking
 
