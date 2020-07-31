@@ -256,13 +256,15 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     #-object input-linux,id=mouse2,evdev=/dev/input/by-id/usb-Logitech_G502_LIGHTSPEED_Wireless_Gaming_Mouse_7C3AC0675C338494-event-mouse \
     #-netdev tap,id=net0,ifname=$NET_TAP_NAME,script=no,downscript=no \
     #-device vfio-pci,host=$PCI_BUS_USB \
-    #-drive file=./Win10_1809Oct_EnglishInternational_x64.iso,media=cdrom \
     #-drive file=./virtio-win-0.1.160.iso,media=cdrom
-    #-soundhw hda \
+    #-drive file=./Win10_1809Oct_EnglishInternational_x64.iso,media=cdrom \
     #-boot order=dc \
     #-vga std \
     #-drive file=/dev/disk/by-id/ata-ST31000524AS_9VPDNR3W,id=disk0,format=raw,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0 \
     #romfile=./hd6950-no-uefi.rom
+    #-audiodev pa,id=pa1,server=/run/user/1000/pulse/native \
+    #-device intel-hda \
+    #-device hda-output,audiodev=pa1 \
 
 killall scream
 
