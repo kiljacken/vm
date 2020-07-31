@@ -217,7 +217,7 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -name $VM_NAME,debug-threads=on \
     -enable-kvm \
     -machine q35,accel=kvm,usb=off,dump-guest-core=off,mem-merge=off,kernel_irqchip=on \
-    -cpu host,invtsc=on,hv-time,kvm-pv-eoi=on,hv-relaxed,hv-vapic,hv-vpindex,hv-vendor-id=ASUSTeK,hv-crash,kvm=off,kvm-hint-dedicated=on,host-cache-info=on,l3-cache=off,+topoext \
+    -cpu host,amd-stibp=off,invtsc=on,topoext=on,svm=off,hv-time,hv-relaxed,hv-vapic,hv-spinlocks=0x1fff,hv-vpindex,hv-runtime,hv-synic,hv-stimer,hv-stimer-direct,hv-reset,hv-vendor-id=other,hv-frequencies,hv-reenlightenment,hv-tlbflush,hv-ipi,kvm=off,host-cache-info=on,l3-cache=off \
     -m $MEMORY_MB \
     -mem-path /dev/hugepages \
     -mem-prealloc \
