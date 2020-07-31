@@ -232,26 +232,27 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -no-hpet \
     -drive file=$OVMF_CODE_PATH,if=pflash,format=raw,readonly=on \
     -drive file=$OVMF_TEMP_VARS,if=pflash,format=raw \
-    -object input-linux,id=mouse2,evdev=/dev/input/by-id/usb-Logitech_USB_Receiver-if02-event-mouse \
-    -object input-linux,id=kbd2,evdev=/dev/input/by-id/usb-04d9_USB-HID_Keyboard-if02-event-mouse \
-    -object input-linux,id=kbd3,evdev=/dev/input/by-id/usb-04d9_USB-HID_Keyboard-event-kbd,grab_all=on,repeat=on \
     -device vfio-pci,host=$PCI_BUS_GPU_VGA,multifunction=on \
     -device vfio-pci,host=$PCI_BUS_GPU_SND, \
     -device vfio-pci,host=$PCI_BUS_GPU_USB, \
     -device vfio-pci,host=$PCI_BUS_GPU_SER, \
     -device vfio-pci,host=$PCI_BUS_NVME \
     -device qemu-xhci,id=xhci \
-    -device virtio-mouse-pci \
-    -device virtio-keyboard-pci \
     -device virtio-net-pci,netdev=net0,mac=$NET_DEV_MAC \
     -netdev bridge,br=br0,id=net0 \
     -device virtio-serial-pci,id=virtio-serial0,max_ports=16 \
     -chardev spicevmc,name=vdagent,id=vdagent \
     -device virtserialport,nr=1,bus=virtio-serial0.0,chardev=vdagent,name=com.redhat.spice.0 \
     -device ivshmem-plain,memdev=ivshmem0 \
-    -object memory-backend-file,id=ivshmem0,share=on,mem-path=/dev/shm/looking-glass,size=32M \
-    -device ivshmem-plain,memdev=ivshmem1 \
-    -object memory-backend-file,id=ivshmem1,share=on,mem-path=/dev/shm/scream-ivshmem,size=2M
+    -object memory-backend-file,id=ivshmem0,share=on,mem-path=/dev/shm/looking-glass,size=32M
+    #-object input-linux,id=mouse2,evdev=$EVDEV_MOUSE \
+    #-object input-linux,id=kbd2,evdev=/dev/input/by-id/usb-04d9_USB-HID_Keyboard-if02-event-mouse \
+    #-object input-linux,id=kbd3,evdev=/dev/input/by-id/usb-04d9_USB-HID_Keyboard-event-kbd,grab_all=on,repeat=on \
+    #-device virtio-mouse-pci \
+    #-device virtio-keyboard-pci \
+    #-device ivshmem-plain,memdev=ivshmem1 \
+    #-object memory-backend-file,id=ivshmem1,share=on,mem-path=/dev/shm/scream-ivshmem,size=2M
+    #-object input-linux,id=mouse2,evdev=/dev/input/by-id/usb-Logitech_USB_Receiver-if02-event-mouse \
     #-object input-linux,id=mouse2,evdev=/dev/input/by-id/usb-Logitech_G502_LIGHTSPEED_Wireless_Gaming_Mouse_7C3AC0675C338494-event-mouse \
     #-netdev tap,id=net0,ifname=$NET_TAP_NAME,script=no,downscript=no \
     #-device vfio-pci,host=$PCI_BUS_USB \
