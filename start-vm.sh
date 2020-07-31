@@ -191,14 +191,16 @@ touch /dev/shm/looking-glass
 chown kiljacken:kiljacken /dev/shm/looking-glass
 chmod 660 /dev/shm/looking-glass
 
-touch /dev/shm/scream-ivshmem
-chown kiljacken:kiljacken /dev/shm/scream-ivshmem
-chmod 660 /dev/shm/scream-ivshmem
+#touch /dev/shm/scream-ivshmem
+#chown kiljacken:kiljacken /dev/shm/scream-ivshmem
+#chmod 660 /dev/shm/scream-ivshmem
+
+# Copy pulseaudio cookie
+# cp /home/kiljacken/.config/pulse/cookie /root/.config/pulse/cookie
 
 (
-    sleep 10s
-    echo "Starting scream-ivshmem-pulse..."
-    su kiljacken -c "env XDG_RUNTIME_DIR=/run/user/1000 scream-ivshmem-pulse /dev/shm/scream-ivshmem"
+    echo "Starting scream reciever..."
+    su kiljacken -c "env XDG_RUNTIME_DIR=/run/user/1000 scream -o pulse -u -p 4011"
 ) &
 
 (
@@ -261,8 +263,7 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     #-drive file=/dev/disk/by-id/ata-ST31000524AS_9VPDNR3W,id=disk0,format=raw,if=none,cache=none,aio=native -device scsi-hd,bus=scsi.0,drive=disk0 \
     #romfile=./hd6950-no-uefi.rom
 
-#killall scream-pulse
-killall scream-ivshmem-pulse
+killall scream
 
 # Switch monitor to DP-2 input
 #ddcutil -d 1 setvcp 60 0x10
