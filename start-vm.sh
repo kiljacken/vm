@@ -129,6 +129,12 @@ PCI_BUS_GPU_SER="$(lspci -nn | grep 10de:1adb | cut -d' ' -f1)"
 PCI_BUS_NVME="$(lspci -nn | grep 8086:f1a5 | cut -d' ' -f1)"
 PCI_BUS_USB="$(lspci -nn | grep 1b21:1242 | cut -d' ' -f1)"
 
+EVDEV_MOUSE="/dev/input/by-id/usb-Logitech_USB_Receiver-if02-event-mouse"
+if [ ! -e "$EVDEV_MOUSE" ]; then
+    echo "Falling back to wired mouse"
+    EVDEV_MOUSE="/dev/input/by-id/usb-Logitech_G502_LIGHTSPEED_Wireless_Gaming_Mouse_7C3AC0675C338494-event-mouse"
+fi
+
 #pci_reset $PCI_BUS_GPU_VGA
 #pci_reset $PCI_BUS_GPU_SND
 #pci_reset $PCI_BUS_GPU_USB
