@@ -198,10 +198,10 @@ chmod 660 /dev/shm/looking-glass
 # Copy pulseaudio cookie
 # cp /home/kiljacken/.config/pulse/cookie /root/.config/pulse/cookie
 
-(
-    echo "Starting scream reciever..."
-    su kiljacken -c "env XDG_RUNTIME_DIR=/run/user/1000 scream -o pulse -u -p 4011"
-) &
+#(
+#    echo "Starting scream reciever..."
+#    su kiljacken -c "env XDG_RUNTIME_DIR=/run/user/1000 scream -o pulse -u -p 4011"
+#) &
 
 (
     sleep 10s
@@ -211,6 +211,7 @@ chmod 660 /dev/shm/looking-glass
 
 echo "Starting QEMU"
 cset proc -e -s vm -- qemu-system-x86_64 \
+    -runas kiljacken \
     -nodefaults \
     -no-user-config \
     -monitor stdio \
@@ -240,11 +241,14 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     -device qemu-xhci,id=xhci \
     -device virtio-net-pci,netdev=net0,mac=$NET_DEV_MAC \
     -netdev bridge,br=br0,id=net0 \
-    -device virtio-serial-pci,id=virtio-serial0,max_ports=16 \
-    -chardev spicevmc,name=vdagent,id=vdagent \
-    -device virtserialport,nr=1,bus=virtio-serial0.0,chardev=vdagent,name=com.redhat.spice.0 \
-    -device ivshmem-plain,memdev=ivshmem0 \
-    -object memory-backend-file,id=ivshmem0,share=on,mem-path=/dev/shm/looking-glass,size=32M
+    -audiodev jack,id=ad0,in.client-name=Windows,out.client-name=Windows,in.connect-ports=system,out.connect-ports=system \
+    -device ich9-intel-hda \
+    -device hda-duplex,audiodev=ad0
+    #-device virtio-serial-pci,id=virtio-serial0,max_ports=16 \
+    #-chardev spicevmc,name=vdagent,id=vdagent \
+    #-device virtserialport,nr=1,bus=virtio-serial0.0,chardev=vdagent,name=com.redhat.spice.0 \
+    #-device ivshmem-plain,memdev=ivshmem0 \
+    #-object memory-backend-file,id=ivshmem0,share=on,mem-path=/dev/shm/looking-glass,size=32M
     #-object input-linux,id=mouse2,evdev=$EVDEV_MOUSE \
     #-object input-linux,id=kbd2,evdev=/dev/input/by-id/usb-04d9_USB-HID_Keyboard-if02-event-mouse \
     #-object input-linux,id=kbd3,evdev=/dev/input/by-id/usb-04d9_USB-HID_Keyboard-event-kbd,grab_all=on,repeat=on \
@@ -266,7 +270,7 @@ cset proc -e -s vm -- qemu-system-x86_64 \
     #-device intel-hda \
     #-device hda-output,audiodev=pa1 \
 
-killall scream
+# killall scream
 
 # Switch monitor to DP-2 input
 #ddcutil -d 1 setvcp 60 0x10
